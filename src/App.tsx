@@ -1,11 +1,11 @@
 import React from 'react';
-import ContactForm from './components/ContactForm';
+import AuthFlow from './components/AuthFlow_Tailwind';
 import './App.css';
 
 function App() {
   return (
     <div className="App">
-      <ContactForm />
+      <AuthFlow />
     </div>
   );
 }
