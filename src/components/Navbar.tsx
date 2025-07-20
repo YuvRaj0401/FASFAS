@@ -8,7 +8,7 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ 
-  brandName = "BizPortal", 
+  brandName = "FasFas", 
   brandIcon = "🏢",
   className = ""
 }) => {

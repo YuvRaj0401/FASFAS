@@ -51,6 +51,16 @@ const formSchema = z.object({
   warehouseAddress: z
     .string()
     .min(1, 'Warehouse address is required'),
+  warehouseCity: z
+    .string()
+    .min(1, 'City is required'),
+  warehouseState: z
+    .string()
+    .min(1, 'State is required'),
+  warehousePincode: z
+    .string()
+    .min(1, 'Pincode is required')
+    .regex(/^\d{6}$/, 'Pincode must be 6 digits'),
   warehouseArea: z
     .string()
     .min(1, 'Warehouse area is required'),
@@ -147,7 +157,7 @@ const BusinessOnboardingForm: React.FC = () => {
       case 'businessType':
         return !!(values.businessType && values.businessDescription);
       case 'warehouseAddress':
-        return !!(values.warehouseAddress && values.warehouseArea);
+        return !!(values.warehouseAddress && values.warehouseCity && values.warehouseState && values.warehousePincode && values.warehouseArea);
       case 'productCategory':
         return !!values.productCategory;
       case 'accountHolderName':
@@ -531,7 +541,8 @@ const BusinessOnboardingForm: React.FC = () => {
               </div>
             </div>
           </div>
-        );      case 'warehouseAddress':
+        );      
+        case 'warehouseAddress':
         return (
           <div className="multi-field-step">
             <h3 className="section-title">Warehouse Information</h3>
@@ -571,20 +582,104 @@ const BusinessOnboardingForm: React.FC = () => {
               </div>
             </div>
 
+            <h3 className="section-title">Warehouse Address</h3>
+
             <div className="form-field-container full-width">
               <label className="form-field-label">
-                WAREHOUSE ADDRESS
+                STREET ADDRESS
                 <span className="required-indicator">*</span>
               </label>
               <textarea
                 className="form-field-input"
                 {...register('warehouseAddress')}
-                placeholder="Enter complete warehouse address with pincode"
-                rows={3}
+                placeholder="Enter building number, street name, area/locality"
+                rows={2}
               />
               {errors.warehouseAddress && (
                 <span className="error-message">{errors.warehouseAddress.message}</span>
               )}
+            </div>
+
+            <div className="form-grid-3">
+              <div className="form-field-container">
+                <label className="form-field-label">
+                  CITY
+                  <span className="required-indicator">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="form-field-input"
+                  {...register('warehouseCity')}
+                  placeholder="Enter city"
+                />
+                {errors.warehouseCity && (
+                  <span className="error-message">{errors.warehouseCity.message}</span>
+                )}
+              </div>
+
+              <div className="form-field-container">
+                <label className="form-field-label">
+                  STATE
+                  <span className="required-indicator">*</span>
+                </label>
+                <select
+                  className="form-field-input"
+                  {...register('warehouseState')}
+                >
+                  <option value="">Select state</option>
+                  <option value="andhra-pradesh">Andhra Pradesh</option>
+                  <option value="arunachal-pradesh">Arunachal Pradesh</option>
+                  <option value="assam">Assam</option>
+                  <option value="bihar">Bihar</option>
+                  <option value="chhattisgarh">Chhattisgarh</option>
+                  <option value="goa">Goa</option>
+                  <option value="gujarat">Gujarat</option>
+                  <option value="haryana">Haryana</option>
+                  <option value="himachal-pradesh">Himachal Pradesh</option>
+                  <option value="jharkhand">Jharkhand</option>
+                  <option value="karnataka">Karnataka</option>
+                  <option value="kerala">Kerala</option>
+                  <option value="madhya-pradesh">Madhya Pradesh</option>
+                  <option value="maharashtra">Maharashtra</option>
+                  <option value="manipur">Manipur</option>
+                  <option value="meghalaya">Meghalaya</option>
+                  <option value="mizoram">Mizoram</option>
+                  <option value="nagaland">Nagaland</option>
+                  <option value="odisha">Odisha</option>
+                  <option value="punjab">Punjab</option>
+                  <option value="rajasthan">Rajasthan</option>
+                  <option value="sikkim">Sikkim</option>
+                  <option value="tamil-nadu">Tamil Nadu</option>
+                  <option value="telangana">Telangana</option>
+                  <option value="tripura">Tripura</option>
+                  <option value="uttar-pradesh">Uttar Pradesh</option>
+                  <option value="uttarakhand">Uttarakhand</option>
+                  <option value="west-bengal">West Bengal</option>
+                  <option value="delhi">Delhi</option>
+                  <option value="chandigarh">Chandigarh</option>
+                  <option value="puducherry">Puducherry</option>
+                </select>
+                {errors.warehouseState && (
+                  <span className="error-message">{errors.warehouseState.message}</span>
+                )}
+              </div>
+
+              <div className="form-field-container">
+                <label className="form-field-label">
+                  PINCODE
+                  <span className="required-indicator">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="form-field-input"
+                  {...register('warehousePincode')}
+                  placeholder="Enter 6-digit pincode"
+                  maxLength={6}
+                />
+                {errors.warehousePincode && (
+                  <span className="error-message">{errors.warehousePincode.message}</span>
+                )}
+              </div>
             </div>
 
             <h3 className="section-title">Logistics & Operations</h3>

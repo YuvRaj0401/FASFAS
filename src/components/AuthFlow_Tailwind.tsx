@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Navbar from './Navbar_Tailwind';
 import BusinessOnboardingForm from './ContactForm_Tailwind';
+import { phoneOtpAPI, emailOtpAPI } from '../config/api';
 
 // Step 1: Mobile verification schema
 const mobileSchema = z.object({
@@ -60,6 +61,8 @@ interface AuthData {
   mobile: string;
   email: string;
   password: string;
+  userId?: number;
+  isNewUser?: boolean;
 }
 
 const AuthFlow: React.FC = () => {
@@ -109,48 +112,130 @@ const AuthFlow: React.FC = () => {
 
   // Handle mobile number submission
   const handleMobileSubmit = async (data: { mobile: string }) => {
+
+    //TODO
+    //CHECK FOR NEW USER TUTORIAL SCREENS
+    
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setAuthData(prev => ({ ...prev, mobile: data.mobile }));
-      setCurrentStep('mobileOtp');
-      setOtpTimer(30);
+    
+    try {
+      const result = await phoneOtpAPI.sendOTP(data.mobile);
+      
+      if (result.success) {
+        // API call successful - OTP sent
+        setAuthData(prev => ({ ...prev, mobile: data.mobile }));
+        setCurrentStep('mobileOtp');
+        setOtpTimer(30);
+        startOtpTimer();
+      } else {
+        // API returned success: false
+        alert(result.message || 'Failed to send OTP. Please try again.');
+      }
+    } catch (error) {
+      // Network error or other exceptions
+      console.error('Error sending OTP:', error);
+      alert('Failed to send OTP. Please check your phone number and try again.');
+    } finally {
       setIsLoading(false);
-      startOtpTimer();
-    }, 1500);
+    }
   };
 
   // Handle mobile OTP verification
   const handleMobileOtpSubmit = async (data: { mobileOtp: string }) => {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setCurrentStep('email');
+    
+    try {
+      const result = await phoneOtpAPI.verifyOTP(authData.mobile!, data.mobileOtp);
+      
+      if (result.success) {
+        // OTP verification successful
+        setAuthData(prev => ({
+          ...prev,
+          userId: result.user_id,
+          isNewUser: result.is_new_user
+        }));
+        
+        setCurrentStep('email');
+        
+        // Log verification result for debugging
+        console.log('Phone verification successful:', {
+          isNewUser: result.is_new_user,
+          userId: result.user_id,
+          message: result.message
+        });
+      } else {
+        // OTP verification failed
+        alert(result.message || 'Invalid OTP. Please try again.');
+      }
+    } catch (error) {
+      // Network error or other exceptions
+      console.error('Error verifying OTP:', error);
+      alert('Failed to verify OTP. Please check your code and try again.');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   // Handle email submission
   const handleEmailSubmit = async (data: { email: string }) => {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setAuthData(prev => ({ ...prev, email: data.email }));
-      setCurrentStep('emailOtp');
-      setOtpTimer(30);
+
+    try {
+      const result = await emailOtpAPI.sendOTP(data.email, authData.mobile!);
+
+      if (result.success) {
+        // API call successful - OTP sent
+        setAuthData(prev => ({ ...prev, email: data.email }));
+        setCurrentStep('emailOtp');
+        setOtpTimer(30);
+        startOtpTimer();
+      } else {
+        // API returned success: false
+        alert(result.message || 'Failed to send OTP. Please try again.');
+      }
+    } catch (error) {
+      // Network error or other exceptions
+      console.error('Error sending OTP:', error);
+      alert('Failed to send OTP. Please check your email and try again.');
+    } finally {
       setIsLoading(false);
-      startOtpTimer();
-    }, 1500);
+    }
   };
 
   // Handle email OTP verification
   const handleEmailOtpSubmit = async (data: { emailOtp: string }) => {
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setCurrentStep('password');
+
+    try {
+      const result = await emailOtpAPI.verifyOTP(authData.email!, authData.mobile!, data.emailOtp);
+
+      if (result.success) {
+        // OTP verification successful
+        setAuthData(prev => ({
+          ...prev,
+          userId: result.user_id,
+          isNewUser: result.is_new_user
+        }));
+
+        setCurrentStep('password');
+
+        // Log verification result for debugging
+        console.log('Email verification successful:', {
+          isNewUser: result.is_new_user,
+          userId: result.user_id,
+          message: result.message
+        });
+      } else {
+        // OTP verification failed
+        alert(result.message || 'Invalid OTP. Please try again.');
+      }
+    } catch (error) {
+      // Network error or other exceptions
+      console.error('Error verifying OTP:', error);
+      alert('Failed to verify OTP. Please check your code and try again.');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   // Handle password setup
@@ -165,10 +250,31 @@ const AuthFlow: React.FC = () => {
   };
 
   // Resend OTP
-  const resendOtp = () => {
-    setOtpTimer(30);
-    startOtpTimer();
-    // Simulate API call for resending OTP
+  const resendOtp = async () => {
+    if (currentStep === 'mobileOtp' && authData.mobile) {
+      setIsLoading(true);
+      
+      try {
+        const result = await phoneOtpAPI.sendOTP(authData.mobile);
+        
+        if (result.success) {
+          // OTP resent successfully
+          setOtpTimer(30);
+          startOtpTimer();
+        } else {
+          alert(result.message || 'Failed to resend OTP. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error resending OTP:', error);
+        alert('Failed to resend OTP. Please check your connection and try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // For email OTP resend or other cases
+      setOtpTimer(30);
+      startOtpTimer();
+    }
   };
 
   // Get progress percentage

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Navbar from './Navbar_Tailwind';
@@ -47,12 +47,19 @@ const formSchema = z.object({
     .min(1, 'Business description is required'),
   
   // Step 5: Warehouse Details
-  warehouseAddress: z
-    .string()
-    .min(1, 'Warehouse address is required'),
-  warehouseArea: z
-    .string()
-    .min(1, 'Warehouse area is required'),
+  warehouses: z
+    .array(z.object({
+      address: z.string().min(1, 'Address is required'),
+      city: z.string().min(1, 'City is required'),
+      state: z.string().min(1, 'State is required'),
+      pincode: z.string().min(1, 'Pincode is required').regex(/^\d{6}$/, 'Pincode must be 6 digits'),
+      area: z.string().min(1, 'Area is required'),
+      storageType: z.string().optional(),
+      operationalHours: z.string().optional(),
+      staffCount: z.string().optional(),
+      logisticsPartner: z.string().optional(),
+    }))
+    .min(1, 'At least one warehouse is required'),
   
   // Step 6: Brand & Product Details
   productCategory: z
@@ -87,10 +94,29 @@ const BusinessOnboardingForm: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors },
-    watch
+    watch,
+    control
   } = useForm<FormData>({
     resolver: zodResolver(formSchema),
-    mode: 'onChange'
+    mode: 'onChange',
+    defaultValues: {
+      warehouses: [{ 
+        address: '', 
+        city: '', 
+        state: '', 
+        pincode: '', 
+        area: '', 
+        storageType: '', 
+        operationalHours: '', 
+        staffCount: '', 
+        logisticsPartner: '' 
+      }]
+    }
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "warehouses"
   });
 
   // Define the order of steps with step names for easier navigation
@@ -99,7 +125,7 @@ const BusinessOnboardingForm: React.FC = () => {
     { key: 'fullName', name: 'Basic Information' },
     { key: 'signature', name: 'Document Upload' },
     { key: 'businessType', name: 'Business Details' },
-    { key: 'warehouseAddress', name: 'Warehouse Details' },
+    { key: 'warehouses', name: 'Warehouse Details' },
     { key: 'productCategory', name: 'Brand Details' },
     { key: 'accountHolderName', name: 'Bank Details' },
     { key: 'review', name: 'Declaration' }
@@ -135,8 +161,10 @@ const BusinessOnboardingForm: React.FC = () => {
         return true; // Optional step
       case 'businessType':
         return !!(values.businessType && values.businessDescription);
-      case 'warehouseAddress':
-        return !!(values.warehouseAddress && values.warehouseArea);
+      case 'warehouses':
+        return !!(values.warehouses && values.warehouses.length > 0 && values.warehouses.every(w => 
+          w.address && w.city && w.state && w.pincode && w.area
+        ));
       case 'productCategory':
         return !!values.productCategory;
       case 'accountHolderName':
@@ -384,44 +412,257 @@ const BusinessOnboardingForm: React.FC = () => {
           </div>
         );
 
-      case 'warehouseAddress':
+      case 'warehouses':
         return (
-          <div className="flex flex-col gap-6 max-w-2xl mx-auto">
+          <div className="flex flex-col gap-6 max-w-6xl mx-auto">
             <div className="text-center">
               <h2 className="text-2xl font-bold text-gray-900 mb-3">Warehouse Details</h2>
-              <p className="text-gray-600 text-sm">Provide information about your storage facility</p>
+              <p className="text-gray-600 text-sm">Manage your warehouse locations and storage facilities</p>
             </div>
 
             <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Warehouse Address <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  {...register('warehouseAddress')}
-                  rows={3}
-                  placeholder="Enter complete warehouse address"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-vertical"
-                />
-                {errors.warehouseAddress && (
-                  <p className="text-red-500 text-sm mt-1">{errors.warehouseAddress.message}</p>
-                )}
+              {fields.map((field, index) => (
+                <div key={field.id} className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Warehouse {index + 1}
+                    </h3>
+                    {fields.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => remove(index)}
+                        className="text-red-600 hover:text-red-800 text-sm font-medium flex items-center gap-1"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Warehouse Info Section */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h4 className="text-md font-medium text-gray-900 mb-4">Warehouse Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Warehouse Area (sq ft) <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          {...register(`warehouses.${index}.area` as const)}
+                          type="number"
+                          placeholder="Enter warehouse area"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          min="1"
+                        />
+                        {errors.warehouses?.[index]?.area && (
+                          <p className="text-red-500 text-sm mt-1">{errors.warehouses[index]?.area?.message}</p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Storage Type
+                        </label>
+                        <select 
+                          {...register(`warehouses.${index}.storageType` as const)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
+                        >
+                          <option value="">Select storage type</option>
+                          <option value="ambient">Ambient Storage</option>
+                          <option value="cold">Cold Storage</option>
+                          <option value="frozen">Frozen Storage</option>
+                          <option value="mixed">Mixed Storage</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Address Section */}
+                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h4 className="text-md font-medium text-gray-900 mb-4">Warehouse Address</h4>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Street Address <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          {...register(`warehouses.${index}.address` as const)}
+                          rows={2}
+                          placeholder="Enter building number, street name, area/locality"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-vertical"
+                        />
+                        {errors.warehouses?.[index]?.address && (
+                          <p className="text-red-500 text-sm mt-1">{errors.warehouses[index]?.address?.message}</p>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            City <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            {...register(`warehouses.${index}.city` as const)}
+                            type="text"
+                            placeholder="Enter city"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          />
+                          {errors.warehouses?.[index]?.city && (
+                            <p className="text-red-500 text-sm mt-1">{errors.warehouses[index]?.city?.message}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            State <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            {...register(`warehouses.${index}.state` as const)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
+                          >
+                            <option value="">Select state</option>
+                            <option value="andhra-pradesh">Andhra Pradesh</option>
+                            <option value="arunachal-pradesh">Arunachal Pradesh</option>
+                            <option value="assam">Assam</option>
+                            <option value="bihar">Bihar</option>
+                            <option value="chhattisgarh">Chhattisgarh</option>
+                            <option value="goa">Goa</option>
+                            <option value="gujarat">Gujarat</option>
+                            <option value="haryana">Haryana</option>
+                            <option value="himachal-pradesh">Himachal Pradesh</option>
+                            <option value="jharkhand">Jharkhand</option>
+                            <option value="karnataka">Karnataka</option>
+                            <option value="kerala">Kerala</option>
+                            <option value="madhya-pradesh">Madhya Pradesh</option>
+                            <option value="maharashtra">Maharashtra</option>
+                            <option value="manipur">Manipur</option>
+                            <option value="meghalaya">Meghalaya</option>
+                            <option value="mizoram">Mizoram</option>
+                            <option value="nagaland">Nagaland</option>
+                            <option value="odisha">Odisha</option>
+                            <option value="punjab">Punjab</option>
+                            <option value="rajasthan">Rajasthan</option>
+                            <option value="sikkim">Sikkim</option>
+                            <option value="tamil-nadu">Tamil Nadu</option>
+                            <option value="telangana">Telangana</option>
+                            <option value="tripura">Tripura</option>
+                            <option value="uttar-pradesh">Uttar Pradesh</option>
+                            <option value="uttarakhand">Uttarakhand</option>
+                            <option value="west-bengal">West Bengal</option>
+                            <option value="delhi">Delhi</option>
+                            <option value="chandigarh">Chandigarh</option>
+                            <option value="puducherry">Puducherry</option>
+                          </select>
+                          {errors.warehouses?.[index]?.state && (
+                            <p className="text-red-500 text-sm mt-1">{errors.warehouses[index]?.state?.message}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Pincode <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            {...register(`warehouses.${index}.pincode` as const)}
+                            type="text"
+                            placeholder="Enter 6-digit pincode"
+                            maxLength={6}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                          />
+                          {errors.warehouses?.[index]?.pincode && (
+                            <p className="text-red-500 text-sm mt-1">{errors.warehouses[index]?.pincode?.message}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Operations Section */}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="text-md font-medium text-gray-900 mb-4">Logistics & Operations</h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Operational Hours
+                        </label>
+                        <select 
+                          {...register(`warehouses.${index}.operationalHours` as const)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
+                        >
+                          <option value="">Select hours</option>
+                          <option value="8-hours">8 Hours/Day</option>
+                          <option value="12-hours">12 Hours/Day</option>
+                          <option value="24-hours">24 Hours/Day</option>
+                          <option value="custom">Custom Hours</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Staff Count
+                        </label>
+                        <input
+                          {...register(`warehouses.${index}.staffCount` as const)}
+                          type="number"
+                          placeholder="Number of staff"
+                          min="1"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Logistics Partner
+                        </label>
+                        <select 
+                          {...register(`warehouses.${index}.logisticsPartner` as const)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
+                        >
+                          <option value="">Select partner</option>
+                          <option value="self">Self Managed</option>
+                          <option value="third-party">Third Party</option>
+                          <option value="myntra">Myntra Logistics</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Add Warehouse Button */}
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => append({ 
+                    address: '', 
+                    city: '', 
+                    state: '', 
+                    pincode: '', 
+                    area: '', 
+                    storageType: '', 
+                    operationalHours: '', 
+                    staffCount: '', 
+                    logisticsPartner: '' 
+                  })}
+                  className="flex items-center gap-2 px-6 py-3 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:border-blue-400 hover:text-blue-700 transition-all duration-200"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Add Another Warehouse
+                </button>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Warehouse Area (sq ft) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  {...register('warehouseArea')}
-                  type="text"
-                  placeholder="Enter warehouse area in square feet"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                />
-                {errors.warehouseArea && (
-                  <p className="text-red-500 text-sm mt-1">{errors.warehouseArea.message}</p>
-                )}
-              </div>
+              {/* General Error for Warehouses */}
+              {errors.warehouses && typeof errors.warehouses.message === 'string' && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-600 text-sm">{errors.warehouses.message}</p>
+                </div>
+              )}
             </div>
           </div>
         );
